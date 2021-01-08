@@ -1,0 +1,257 @@
+%!PS-Adobe-3.0
+%%DocumentMedia: Plain 612 792 80 () ()
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Encoder Wheel Generator v1.4
+% Copyright 2014 Nick Ames (nick@fetchmodus.org). Licensed GNU GPLv3.
+% If you find any bugs, please email me.
+% If you make a derivative, consider posting it on Thingiverse as one.
+% Changelog:
+% v1.4 Added page size adjustment options.
+% v1.3 Corrected bug caused by me being idiot about how quadrature actually works. 
+% I was calculating my phase difference based on one segment, but two segments actually make up a full wave, 
+% so the quadrature came out as 45 degrees out of phase. Many thanks to Rafael Pinto for finding this.
+% v1.2 Corrected bug causing a 1 degree gap in the segment track at extremely high segment counts (>700).
+% v1.1 Corrected bug causing letter descenders (such as on g,j,p,q, and y) to be drawn on and below the underLine.
+% Letter descenders are now placed above it.
+% v1.01 Corrected typos in comments.
+
+% Unit conversions
+/in {72 mul} def
+/inch {in} def
+/mm {2.8346 mul} def
+/cm {28.346 mul} def
+/thou {.072 mul} def % 1/1000 of an inch.
+/pi 3.141592 def
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%--Encoder Wheel Configuration--
+/OuterDiameter 20 mm def % The outer diameter of the encoder wheel. If an outer circle (see below) is drawn, it will be drawn so the _outside edge_ is the correct diameter.
+/Segments 8 def % The total number of segments (each black or white stripe is a segment).
+/doubleTrack false def % If true, print a second track inward of the first one and PhaseDifference out of phase with it.
+/PhaseDifferenceDeg 90 def % The phase difference (in degrees) between the two tracks (if doubleTrack is true).
+/SegmentWidth 7 mm def % The distance from the inside of the segments to the outside of the segments.
+/ShaftDiameter 2 mm def % The inner diameter of the wheel. It will be drawn so the _inside edge_ of the line is the true inner diameter.
+
+/LineWidth .1 mm def %The width of cross hair lines, ID/OD circles, etc.
+/outerCircle true def %Should we place a circle around the outer edge of the wheel? If true, it will be drawn so the _outside edge_ of the line is the true diameter.
+/OuterGap 0 mm def %How far below the OuterDiameter the segments are placed. *If outerCircle is set to false, this should be zero.*
+/interCircle false def % Should we draw a line between the two tracks(if applicable)?
+/InterGap 0 mm def %The gap between the two tracks, if applicable.
+/innerCircle true def %Should we draw a circle on the inside of the disk below the segments?
+/InnerGap 0 mm def %The gap between the bottom of the segments and the innerLine.
+/crossHair true def %Should we draw a crosshair centered in the shaft circle?
+/makeIndex false def %Should we create an index track?
+/IndexAngle 0 def %How wide the index track should be, in degress. Set to zero to use the angle of one segment.
+
+%--Text Configuration--
+/printText false def %Should we print text?
+/Text (encoderwheel.ps Demonstration Steps:100 OD:40mm ID:8mm) def %The text to print. Preserve parenthesis when changing.
+/underline false def %Should we draw a circle that will underline the text?
+/UnderlineWidth LineWidth 2 mul def %A thicker line below the text looks nice.
+/overLine false def %Should we draw a circle over the text? (Will only be drawn if there is text.)
+/TextFont (Helvetica) def %The font to use. If your PostScript interpreter doesn't have the font, it will substitute one. At least, that's what mine does. If you aren't seeing any text and can't figure out why, try changing the font.
+
+%--Page Configuration--
+% In addition to the configuration below, be sure to set the DSC page size in the DocumentMedia directive at the top of the file.
+% Some viewers require the DSC page size, and unfortunately it can't be set from the PostScript code. The first number in the DocumentMedia
+% directive is the page width in PostScript points. The second number is the page height in PostScript points. There are 72 postscript
+% points per inch (about 28.35 postscript points per cm).
+/fillPage true def %If true, fill the page with the maximum number of encoders it can accommodate (with adequate boundaries between them for cutting).
+/PageWidth 8.5 in def %Paper width.
+/PageHeight 11 in def %Paper height.
+%Margins
+/LeftMargin .5 in def
+/RightMargin .5 in def
+/TopMargin .5 in def
+/BottomMargin .5 in def
+/CutAllow .1 in def %How much space should be put between encoders.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%
+%__Configuration Stops Here__
+
+%Set the page size
+<< /PageSize [PageWidth PageHeight] >> setpagedevice
+
+/DrawEncoder { %Draw an encoder, centered about the origin
+  LineWidth setlinewidth
+  newpath
+  0 0 ShaftDiameter 2 div LineWidth 2 div add 0 360 arc %Draw the shaft circle of the disk
+  stroke
+  newpath
+  outerCircle {0 0 OuterDiameter 2 div LineWidth 2 div sub 0 360 arc} if  %Draw the outer circle, if applicable
+  stroke
+  newpath
+  %Draw inner circle
+  innerCircle {
+    doubleTrack
+    %Two tracks:
+    {0 0 OuterDiameter 2 div OuterGap sub SegmentWidth sub InnerGap sub LineWidth 2 div sub InterGap sub 0 360 arc}
+    %Only one track:
+    {0 0 OuterDiameter 2 div OuterGap sub SegmentWidth sub InnerGap sub LineWidth 2 div sub 0 360 arc}
+    ifelse
+  } if
+  stroke
+  %draw inter circle
+  newpath
+  interCircle doubleTrack and
+  {0 0 OuterDiameter 2 div OuterGap sub SegmentWidth 2 div sub InterGap 2 div sub 0 360 arc} if
+  stroke
+  %Draw the encoder segments:
+  /angle 360 Segments div def
+  0 angle 2 mul 360 { %we draw two segments per run of the loop
+    newpath
+    %outer arc
+    /CurrentAngle exch def
+    0 0 OuterDiameter 2 div OuterGap sub CurrentAngle CurrentAngle angle add arc
+    %inner arc
+    doubleTrack
+     {0 0 OuterDiameter 2 div OuterGap sub SegmentWidth 2 div sub CurrentAngle angle add CurrentAngle arcn}
+     {0 0 OuterDiameter 2 div OuterGap sub SegmentWidth sub CurrentAngle angle add CurrentAngle arcn} ifelse
+    closepath
+    fill
+    %if we are making two tracks, draw the second track
+    doubleTrack {
+      /CurrentAngle CurrentAngle angle PhaseDifferenceDeg 360 div 2 mul mul add def
+      newpath
+      0 0 OuterDiameter 2 div OuterGap sub SegmentWidth 2 div sub InterGap sub CurrentAngle CurrentAngle angle add arc
+      0 0 OuterDiameter 2 div OuterGap sub SegmentWidth sub InterGap sub CurrentAngle angle add CurrentAngle arcn
+      closepath
+      fill
+} if
+} for
+  %Calculate the radius of the top of the index line.
+  doubleTrack
+  {/IndexTopRadius OuterDiameter 2 div OuterGap sub SegmentWidth sub InnerGap sub InterGap sub def}
+  {/IndexTopRadius OuterDiameter 2 div OuterGap sub SegmentWidth sub InnerGap sub def} ifelse
+
+  /HalfwayRadius IndexTopRadius ShaftDiameter 2 div sub .5 mul ShaftDiameter 2 div add def
+  %Draw the index line
+  makeIndex {
+    newpath
+    IndexAngle 0 eq
+      {0 0 IndexTopRadius 0 angle arc
+       0 0 HalfwayRadius angle 0 arcn }
+      {0 0 IndexTopRadius 0 IndexAngle arc
+       0 0 HalfwayRadius IndexAngle 0 arcn } ifelse
+    closepath
+    fill
+} if
+  %Draw the underLine
+  UnderlineWidth setlinewidth
+  newpath
+  underline {0 0 HalfwayRadius 0 360 arc} if
+  stroke
+  LineWidth setlinewidth
+  %Check if our text will fit with the default font size. If not, compute the correct one.
+  printText {
+    /DefaultFontSize HalfwayRadius ShaftDiameter 2 div sub .3 mul def
+    %Load the default fontsize
+    TextFont findfont DefaultFontSize scalefont setfont
+    /TextUnderRadius HalfwayRadius UnderlineWidth 2 div sub DefaultFontSize .35 mul sub def
+    /TextCircumference TextUnderRadius 5.7 mul def %We must use a smaller circumference when calculating so the text is drawn correctly.
+    %if the text is too large, scale it
+    Text stringwidth pop TextCircumference gt
+    {/FontSize TextCircumference Text stringwidth pop div DefaultFontSize mul def}
+    {/FontSize DefaultFontSize def} ifelse
+    %Print the Text (Also, shrink the radius slightly to account for letter underhangs
+    TextFont findfont FontSize scalefont setfont
+    Text FontSize 0 TextUnderRadius insidecircletext
+    %print the overLine
+    /TextOverRadius TextUnderRadius FontSize sub def
+    overLine {newpath 0 0 TextOverRadius 0 360 arc stroke} if
+    %Draw text-specific crossHair
+    crossHair
+    { newpath
+      TextOverRadius neg 0 moveto
+      TextOverRadius 0 lineto
+      stroke
+      newpath
+      0 TextOverRadius moveto
+      0 TextOverRadius neg lineto
+      stroke } if
+  } if
+  %Draw non-text crossHair
+  crossHair printText not and
+  { newpath
+    HalfwayRadius neg 0 moveto
+    HalfwayRadius 0 lineto
+    stroke
+    newpath
+    0 HalfwayRadius moveto
+    0 HalfwayRadius neg lineto
+    stroke } if
+} def
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% Text routine borrowed from Adobe Blue Book Program 10, on page 167
+/circtextdict 16 dict def
+circtextdict begin
+/findhalfangle
+{ stringwidth pop 2 div
+    2 xradius mul pi mul div 360 mul
+} def
+
+/insideplacechar
+{ /char exch def
+  /halfangle char findhalfangle def
+  gsave
+    halfangle rotate
+    radius 0 translate
+    90 rotate
+    char stringwidth pop 2 div neg 0 moveto
+    char show
+  grestore
+  halfangle 2 mul rotate
+} def
+
+end
+
+/insidecircletext
+{ circtextdict begin
+    /radius exch def  /centerangle exch def
+    /ptsize exch def  /str exch def
+
+    /xradius radius ptsize 3 div sub def
+    gsave
+      centerangle str findhalfangle sub rotate
+      str
+{ /charcode exch def
+        ( ) dup 0 charcode put insideplacechar
+} forall
+    grestore
+  end
+} def
+
+
+
+%kludge
+/OuterGap OuterGap LineWidth add def %Adjust OuterGap so it measures from the inside edge, not the outside(recall that the outerCircle is placed so its outside edge is OuterDiameter).
+%/kludge
+
+%Layout the encoders
+fillPage
+%fill the page.
+%The equation to determine how many encoders we can place on a line (in one page dimmension)
+%is: ze-cut=linelength where cut is the cutting allowance and e is the encoder diameter plus one cutting allowance
+%the floor (truncated) of z is how many encoders we can fit
+{ /FillableWidth PageWidth LeftMargin sub RightMargin sub def
+  /FillableHeight PageHeight TopMargin sub BottomMargin sub def
+  /e OuterDiameter CutAllow add def
+  /Xz FillableWidth CutAllow add e div floor def
+  /Yz FillableHeight CutAllow add e div floor def
+  Xz 0 eq not Yz 0 eq not and
+  {0 e Xz e mul 1 sub
+    {/X exch LeftMargin add def
+       0 e Yz e mul 1 sub
+         {/Y exch BottomMargin add def
+         gsave
+         X OuterDiameter 2 div add Y OuterDiameter 2 div add translate
+         DrawEncoder
+         grestore } for
+     } for }
+     {PageWidth 2 div PageHeight 2 div translate DrawEncoder} ifelse
+}
+%Don't fill the page, just center the encoder
+{PageWidth 2 div PageHeight 2 div translate DrawEncoder} ifelse
+
+%We're done!
+showpage
